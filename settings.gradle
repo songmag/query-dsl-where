@@ -1,0 +1,4 @@
+rootProject.name = 'where-query-dsl-project'
+
+include 'where-query-dsl'
+include 'example'
