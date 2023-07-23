@@ -1,7 +1,9 @@
+import com.mark.entity.Currency;
 import com.mark.entity.QTestEntity;
 import com.mark.entity.TestEntity;
 import com.mark.filter.DateTimeFilter;
 import com.mark.filter.QueryFilterOperation;
+import com.mark.provider.EnumQueryProvider;
 import com.mark.provider.QueryFilters;
 import com.mark.provider.QueryProvider;
 import com.mark.util.PathFilterUtil;
@@ -28,7 +30,9 @@ public class TestQueryUtil {
         List<Predicate> expectResult = List.of(
                 qTestEntity.id.in(ids),
                 qTestEntity.time.goe(start),
-                qTestEntity.time.lt(end)
+                qTestEntity.time.lt(end),
+                qTestEntity.money.amount.eq(100L),
+                qTestEntity.money.currency.eq(Currency.KRW)
         );
 
         PathFilterUtil<TestEntity> util = new PathFilterUtil<>(qTestEntity);
@@ -40,17 +44,31 @@ public class TestQueryUtil {
                 )
         );
 
-        Assertions.assertEquals(util.call(testFilter.getQuery()), expectResult);
+        Assertions.assertEquals(util.invoke(testFilter.getQuery()), expectResult);
     }
 
     public static class TestFilter extends QueryFilters {
         private QueryProvider id;
         private QueryProvider time;
 
+        private QueryProvider item;
+
+        private QueryProvider amount;
+        private EnumFilterCurrency currency;
+
         public TestFilter(QueryProvider id, QueryProvider time) {
             this.id = id;
             this.time = time;
+            this.item = null;
+            this.amount = new QueryProvider(QueryFilterOperation.EQ, 100L, "money.amount");
+            this.currency = new EnumFilterCurrency(QueryFilterOperation.EQ, "KRW");
         }
-
     }
+
+    static class EnumFilterCurrency extends EnumQueryProvider<Currency> {
+        public EnumFilterCurrency(QueryFilterOperation operation, Object value) {
+            super(operation, value, "money.currency");
+        }
+    }
+
 }

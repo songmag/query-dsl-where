@@ -1,17 +1,15 @@
 package com.mark.provider;
 
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.mark.filter.QueryFilterOperation;
+import com.mark.util.GenericTypeUtil;
 
-import java.lang.reflect.ParameterizedType;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 
 public abstract class EnumQueryProvider<T extends Enum<T>> extends QueryProvider {
-    @JsonCreator
     public EnumQueryProvider(QueryFilterOperation operation, Object value) {
         super(operation, value);
         this.stringToEnum(value);
@@ -22,11 +20,15 @@ public abstract class EnumQueryProvider<T extends Enum<T>> extends QueryProvider
         this.stringToEnum(value);
     }
 
+    void init() {
+        this.stringToEnum(this.value);
+    }
+
     void stringToEnum(Object value) {
         if (value instanceof Enum<?>) {
             return;
         }
-        Class<T> clazz = (Class<T>) ((ParameterizedType) getClass().getGenericSuperclass()).getActualTypeArguments()[0];
+        Class<T> clazz = GenericTypeUtil.getGenericTypeClass(getClass());
         if (value instanceof String) {
             T arg = T.valueOf(clazz, (String) value);
             super.changeValue(arg);

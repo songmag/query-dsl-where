@@ -3,11 +3,21 @@ package com.mark.util;
 import com.mark.filter.QueryFilter;
 import com.querydsl.core.types.Expression;
 import com.querydsl.core.types.Predicate;
-import com.querydsl.core.types.dsl.*;
+import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.core.types.dsl.ComparableExpression;
+import com.querydsl.core.types.dsl.EntityPathBase;
+import com.querydsl.core.types.dsl.SimpleExpression;
+import com.querydsl.core.types.dsl.StringExpression;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.*;
+import java.util.AbstractMap;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Queue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -17,13 +27,19 @@ public class PathFilterUtil<T> {
     private static final Map<String, Method> COMPARE_METHOD;
 
     static {
-        List<Method> COMPARE_EXPRESSION_METHOD = Stream.of(Arrays.stream(ComparableExpression.class.getDeclaredMethods()),
-                        Arrays.stream(StringExpression.class.getDeclaredMethods()))
+        List<Method> COMPARE_EXPRESSION_METHOD = Stream.of(
+                        Arrays.stream(ComparableExpression.class.getDeclaredMethods()),
+                        Arrays.stream(StringExpression.class.getDeclaredMethods())
+                )
                 .flatMap(i -> i)
                 .filter(i -> i.getReturnType() == BooleanExpression.class)
-                .filter(i -> Arrays.stream(i.getParameterTypes()).noneMatch(j -> j.getPackageName().contains("com.querydsl")))
+                .filter(i ->
+                        Arrays.stream(i.getParameterTypes())
+                                .noneMatch(j -> j.getPackageName().contains("com.querydsl"))
+                )
                 .filter(i -> i.getParameterTypes().length == 1)
                 .collect(Collectors.toList());
+
         List<Method> SIMPLE_EXPRESSION_METHOD = Arrays.stream(SimpleExpression.class.getDeclaredMethods())
                 .filter(i -> i.getReturnType() == BooleanExpression.class)
                 .filter(i -> Arrays.stream(i.getParameterTypes()).noneMatch(j -> j.getPackageName().contains("com.querydsl")))
@@ -49,16 +65,17 @@ public class PathFilterUtil<T> {
         makeFields("", rootPath);
     }
 
-    public List<Predicate> call(List<Optional<QueryFilter>> filters) {
-        return filters.stream().map(i -> i.map(j -> {
-                    try {
-                        return call(j);
-                    } catch (NoSuchFieldException | NoSuchMethodException | InvocationTargetException |
-                             IllegalAccessException e) {
-                        throw new RuntimeException(e);
-                    }
-                })).filter(Optional::isPresent)
-                .map(Optional::get)
+    public List<Predicate> invoke(List<QueryFilter> filters) {
+        return filters.stream()
+                .map(i -> {
+                            try {
+                                return invoke(i);
+                            } catch (NoSuchFieldException | NoSuchMethodException | InvocationTargetException |
+                                     IllegalAccessException e) {
+                                throw new RuntimeException(e);
+                            }
+                        }
+                )
                 .collect(Collectors.toList());
     }
 
@@ -79,7 +96,7 @@ public class PathFilterUtil<T> {
         fields.putAll(pathResult);
     }
 
-    private BooleanExpression call(QueryFilter queryFilter) throws NoSuchFieldException, NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+    private BooleanExpression invoke(QueryFilter queryFilter) throws NoSuchFieldException, NoSuchMethodException, InvocationTargetException, IllegalAccessException {
         Queue<String> names = new LinkedBlockingQueue<>();
         if (queryFilter.getValue() == null) {
             return null;

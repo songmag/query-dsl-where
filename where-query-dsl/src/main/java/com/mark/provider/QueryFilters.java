@@ -3,11 +3,14 @@ package com.mark.provider;
 import com.mark.filter.QueryFilter;
 
 import java.lang.reflect.Field;
-import java.util.*;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class QueryFilters {
-    public List<Optional<QueryFilter>> getQuery() {
+    public List<QueryFilter> getQuery() {
         Field[] fields = this.getClass().getDeclaredFields();
         return Arrays.stream(fields)
                 .map(i -> {
@@ -29,11 +32,16 @@ public class QueryFilters {
                 .filter(i -> i.getValue() instanceof QueryProvider)
                 .flatMap(i -> {
                     QueryProvider queryProvider = (QueryProvider) i.getValue();
+                    //If Field Resolving using reflection field -> can not convert enum field
+                    if (queryProvider instanceof EnumQueryProvider) {
+                        ((EnumQueryProvider<?>) queryProvider).init();
+                    }
                     if (queryProvider.isContainFieldName()) {
                         return queryProvider.getQuery(queryProvider.getFieldName()).stream();
                     }
                     return queryProvider.getQuery(i.getKey()).stream();
                 })
+                .filter(Objects::nonNull)
                 .collect(Collectors.toList());
     }
 }
